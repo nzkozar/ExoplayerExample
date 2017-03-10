@@ -10,12 +10,17 @@ import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import com.google.android.exoplayer2.DefaultLoadControl;
+import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
 import com.google.android.exoplayer2.upstream.FileDataSource;
@@ -27,12 +32,60 @@ import java.util.Locale;
 public class MainActivity extends AppCompatActivity {
 
     private SimpleExoPlayer exoPlayer;
+    private ExoPlayer.EventListener eventListener = new ExoPlayer.EventListener() {
+        @Override
+        public void onTimelineChanged(Timeline timeline, Object manifest) {
+            Log.i(TAG,"onTimelineChanged");
+        }
+
+        @Override
+        public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
+            Log.i(TAG,"onTracksChanged");
+        }
+
+        @Override
+        public void onLoadingChanged(boolean isLoading) {
+            Log.i(TAG,"onLoadingChanged");
+        }
+
+        @Override
+        public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+            Log.i(TAG,"onPlayerStateChanged: playWhenReady = "+String.valueOf(playWhenReady)
+                    +" playbackState = "+playbackState);
+            switch (playbackState){
+                case ExoPlayer.STATE_ENDED:
+                    Log.i(TAG,"Playback ended!");
+                    break;
+                case ExoPlayer.STATE_READY:
+                    Log.i(TAG,"ExoPlayer ready!");
+                    break;
+                case ExoPlayer.STATE_BUFFERING:
+                    Log.i(TAG,"Playback buffering!");
+                    break;
+                case ExoPlayer.STATE_IDLE:
+                    Log.i(TAG,"ExoPlayer idle!");
+                    break;
+            }
+        }
+
+        @Override
+        public void onPlayerError(ExoPlaybackException error) {
+            Log.i(TAG,"onPlaybackError: "+error.getMessage());
+        }
+
+        @Override
+        public void onPositionDiscontinuity() {
+            Log.i(TAG,"onPositionDiscontinuity");
+        }
+    };
 
     private SeekBar seekPlayerProgress;
     private Handler handler;
     private ImageButton btnPlay;
     private TextView txtCurrentTime, txtEndTime;
-    private boolean isPlaying =false;
+    private boolean isPlaying = false;
+
+    private static final String TAG = "MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void prepareExoPlayerFromFileUri(Uri uri){
         exoPlayer = ExoPlayerFactory.newSimpleInstance(this, new DefaultTrackSelector(null), new DefaultLoadControl());
+        exoPlayer.addListener(eventListener);
 
         DataSpec dataSpec = new DataSpec(uri);
         final FileDataSource fileDataSource = new FileDataSource();
@@ -80,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void prepareExoPlayerFromRawResourceUri(Uri uri){
         exoPlayer = ExoPlayerFactory.newSimpleInstance(this, new DefaultTrackSelector(null), new DefaultLoadControl());
+        exoPlayer.addListener(eventListener);
 
         DataSpec dataSpec = new DataSpec(uri);
         final RawResourceDataSource rawResourceDataSource = new RawResourceDataSource(this);
