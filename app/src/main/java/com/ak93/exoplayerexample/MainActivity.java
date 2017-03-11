@@ -55,9 +55,14 @@ public class MainActivity extends AppCompatActivity {
             switch (playbackState){
                 case ExoPlayer.STATE_ENDED:
                     Log.i(TAG,"Playback ended!");
+                    //Stop playback and return to start position
+                    setPlayPause(false);
+                    exoPlayer.seekTo(0);
                     break;
                 case ExoPlayer.STATE_READY:
-                    Log.i(TAG,"ExoPlayer ready!");
+                    Log.i(TAG,"ExoPlayer ready! pos: "+exoPlayer.getCurrentPosition()
+                            +" max: "+stringForTime((int)exoPlayer.getDuration()));
+                    setProgress();
                     break;
                 case ExoPlayer.STATE_BUFFERING:
                     Log.i(TAG,"Playback buffering!");
@@ -102,9 +107,9 @@ public class MainActivity extends AppCompatActivity {
                 prepareExoPlayerFromFileUri(Uri.fromFile(file));
             }
         });
-        fileDialog.showDialog();
+        //fileDialog.showDialog();
 
-        //prepareExoPlayerFromRawResourceUri(RawResourceDataSource.buildRawResourceUri(R.raw.audio));
+        prepareExoPlayerFromRawResourceUri(RawResourceDataSource.buildRawResourceUri(R.raw.audio));
     }
 
     private void prepareExoPlayerFromFileUri(Uri uri){
@@ -170,18 +175,24 @@ public class MainActivity extends AppCompatActivity {
         btnPlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(isPlaying){
-                    exoPlayer.setPlayWhenReady(false);
-                    isPlaying =false;
-                    btnPlay.setImageResource(android.R.drawable.ic_media_play);
-                }else{
-                    exoPlayer.setPlayWhenReady(true);
-                    isPlaying =true;
-                    setProgress();
-                    btnPlay.setImageResource(android.R.drawable.ic_media_pause);
-                }
+                setPlayPause(!isPlaying);
             }
         });
+    }
+
+    /**
+     * Starts or stops playback. Also takes care of the Play/Pause button toggling
+     * @param play True if playback should be started
+     */
+    private void setPlayPause(boolean play){
+        isPlaying = play;
+        exoPlayer.setPlayWhenReady(play);
+        if(!isPlaying){
+            btnPlay.setImageResource(android.R.drawable.ic_media_play);
+        }else{
+            setProgress();
+            btnPlay.setImageResource(android.R.drawable.ic_media_pause);
+        }
     }
 
     private void initTxtTime() {
@@ -210,17 +221,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void setProgress() {
         seekPlayerProgress.setProgress(0);
-        seekPlayerProgress.setMax(0);
         seekPlayerProgress.setMax((int) exoPlayer.getDuration()/1000);
+        txtCurrentTime.setText(stringForTime((int)exoPlayer.getCurrentPosition()));
+        txtEndTime.setText(stringForTime((int)exoPlayer.getDuration()));
 
-        handler = new Handler();
+        if(handler == null)handler = new Handler();
         //Make sure you update Seekbar on UI thread
         handler.post(new Runnable() {
-
             @Override
             public void run() {
                 if (exoPlayer != null && isPlaying) {
-                    seekPlayerProgress.setMax(0);
                     seekPlayerProgress.setMax((int) exoPlayer.getDuration()/1000);
                     int mCurrentPosition = (int) exoPlayer.getCurrentPosition() / 1000;
                     seekPlayerProgress.setProgress(mCurrentPosition);
@@ -229,7 +239,6 @@ public class MainActivity extends AppCompatActivity {
 
                     handler.postDelayed(this, 1000);
                 }
-
             }
         });
     }
