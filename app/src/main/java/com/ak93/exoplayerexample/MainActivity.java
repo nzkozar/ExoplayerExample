@@ -13,18 +13,25 @@ import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
+import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
+import com.google.android.exoplayer2.extractor.ExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
+import com.google.android.exoplayer2.trackselection.TrackSelector;
+import com.google.android.exoplayer2.upstream.ByteArrayDataSource;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.upstream.DataSpec;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 import com.google.android.exoplayer2.upstream.FileDataSource;
 import com.google.android.exoplayer2.upstream.RawResourceDataSource;
+import com.google.android.exoplayer2.util.Util;
+
 import java.io.File;
 import java.util.Formatter;
 import java.util.Locale;
@@ -97,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         File f_ext_files_dir = getExternalFilesDir(null);
 
         FileDialog fileDialog = new FileDialog(this, f_ext_files_dir, "");
@@ -105,13 +113,67 @@ public class MainActivity extends AppCompatActivity {
             public void fileSelected(File file) {
                 Log.i("File selected:",file.getAbsolutePath());
                 prepareExoPlayerFromFileUri(Uri.fromFile(file));
+
+                /*
+                try {
+                    FileInputStream inputStream = new FileInputStream(file);
+                    byte[] fileData = new byte[(int)file.length()];
+                    Log.i(TAG,"Data before read: "+fileData.length);
+                    int bytesRead = inputStream.read(fileData);
+                    Log.i(TAG,"Bytes read: "+bytesRead);
+                    if(bytesRead>0) {
+                        prepareExoPlayerFromByteArray(fileData);
+                    }
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                */
             }
         });
         //fileDialog.showDialog();
 
-        prepareExoPlayerFromRawResourceUri(RawResourceDataSource.buildRawResourceUri(R.raw.audio));
+        //prepareExoPlayerFromRawResourceUri(RawResourceDataSource.buildRawResourceUri(R.raw.audio));
+
+        prepareExoPlayerFromURL(Uri.parse("your-URL-here"));
     }
 
+    //TODO
+    private void prepareExoPlayerFromByteArray(byte[] data){
+        exoPlayer = ExoPlayerFactory.newSimpleInstance(this, new DefaultTrackSelector(null), new DefaultLoadControl());
+        exoPlayer.addListener(eventListener);
+
+        final MByteArrayDataSource byteArrayDataSource = new MByteArrayDataSource(data);
+        Log.i(TAG,"ByteArrayDataSource constructed.");
+        /*
+        DataSpec dataSpec = new DataSpec(byteArrayDataSource.getUri());
+        try {
+            byteArrayDataSource.open(dataSpec);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        */
+
+        DataSource.Factory factory = new DataSource.Factory() {
+            @Override
+            public DataSource createDataSource() {
+                return byteArrayDataSource;
+            }
+        };
+        Log.i(TAG,"DataSource.Factory constructed.");
+
+        MediaSource audioSource = new ExtractorMediaSource(byteArrayDataSource.getUri(),
+                factory, new DefaultExtractorsFactory(),null,null);
+        Log.i(TAG,"Audio source constructed.");
+        exoPlayer.prepare(audioSource);
+        initMediaControls();
+    }
+
+    /**
+     * Prepares exoplayer for audio playback from a local file
+     * @param uri
+     */
     private void prepareExoPlayerFromFileUri(Uri uri){
         exoPlayer = ExoPlayerFactory.newSimpleInstance(this, new DefaultTrackSelector(null), new DefaultLoadControl());
         exoPlayer.addListener(eventListener);
@@ -132,6 +194,29 @@ public class MainActivity extends AppCompatActivity {
         };
         MediaSource audioSource = new ExtractorMediaSource(fileDataSource.getUri(),
                 factory, new DefaultExtractorsFactory(), null, null);
+
+        exoPlayer.prepare(audioSource);
+        initMediaControls();
+    }
+
+
+    /**
+     * Prepares exoplayer for audio playback from a remote URL audiofile. Should work with most
+     * popular audiofile types (.mp3, .m4a,...)
+     * @param uri Provide a Uri in a form of Uri.parse("http://blabla.bleble.com/blublu.mp3)
+     */
+    private void prepareExoPlayerFromURL(Uri uri){
+
+        TrackSelector trackSelector = new DefaultTrackSelector();
+
+        LoadControl loadControl = new DefaultLoadControl();
+
+        exoPlayer = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
+
+        DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, "exoplayer2example"), null);
+        ExtractorsFactory extractorsFactory = new DefaultExtractorsFactory();
+        MediaSource audioSource = new ExtractorMediaSource(uri, dataSourceFactory, extractorsFactory, null, null);
+        exoPlayer.addListener(eventListener);
 
         exoPlayer.prepare(audioSource);
         initMediaControls();
