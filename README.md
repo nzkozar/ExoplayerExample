@@ -1,6 +1,6 @@
 # ExoplayerExample
 
-A simple ExoPlayer example (finally!!!!) displaying how to play local audio files.
+A simple ExoPlayer2 audio example displaying how to play audio files.
 
 <ol>
 <li>Play audio file stored in the filesystem</li>
