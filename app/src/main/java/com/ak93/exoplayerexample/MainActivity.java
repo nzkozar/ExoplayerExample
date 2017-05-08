@@ -136,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
 
         //prepareExoPlayerFromRawResourceUri(RawResourceDataSource.buildRawResourceUri(R.raw.audio));
 
-        prepareExoPlayerFromURL(Uri.parse("your-URL-here"));
+        prepareExoPlayerFromURL(Uri.parse("https://github.com/nzkozar/ExoplayerExample/blob/master/sample.m4a?raw=true"));
     }
 
     //TODO
